@@ -1,0 +1,48 @@
+[
+  {
+    "id": "BUYER001",
+    "name": "Cornerstone Capital Partners",
+    "type": "Institutional Investor",
+    "strategy": "Core/Core-Plus",
+    "preferences": {
+      "budget_min": 10000000,
+      "budget_max": 25000000,
+      "property_types": ["Office", "Industrial"],
+      "target_cap_rate_min": 6.0,
+      "target_markets": ["Dallas", "Phoenix", "Austin"],
+      "min_occupancy": 90,
+      "min_year_built": 2010,
+      "priority": "Stable cash flow with credit tenancy and long-term leases. Minimal management intensity."
+    }
+  },
+  {
+    "id": "BUYER002",
+    "name": "Redstone Value Fund III",
+    "type": "Value-Add Fund",
+    "strategy": "Value-Add / Opportunistic",
+    "preferences": {
+      "budget_min": 8000000,
+      "budget_max": 20000000,
+      "property_types": ["Office", "Industrial", "Retail"],
+      "target_cap_rate_min": 7.0,
+      "target_markets": ["Dallas", "Fort Worth", "San Antonio", "Phoenix"],
+      "max_occupancy": 90,
+      "priority": "Below-market rents, vacancy to fill, or repositioning opportunity. Willing to take on lease-up risk for higher returns. Prefer below replacement cost."
+    }
+  },
+  {
+    "id": "BUYER003",
+    "name": "Pacific Retail REIT",
+    "type": "REIT",
+    "strategy": "Core",
+    "preferences": {
+      "budget_min": 8000000,
+      "budget_max": 22000000,
+      "property_types": ["Retail"],
+      "target_cap_rate_min": 5.5,
+      "target_markets": ["Scottsdale", "Chandler", "Dallas", "Austin"],
+      "min_occupancy": 90,
+      "priority": "Grocery-anchored or lifestyle retail with strong anchors and long weighted average lease term. High-income demographics preferred."
+    }
+  }
+]

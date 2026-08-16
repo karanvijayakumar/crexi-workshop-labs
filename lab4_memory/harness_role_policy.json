@@ -1,0 +1,22 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "BedrockModelAccess",
+      "Effect": "Allow",
+      "Action": [
+        "bedrock:InvokeModel",
+        "bedrock:InvokeModelWithResponseStream"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "AgentCoreAccess",
+      "Effect": "Allow",
+      "Action": [
+        "bedrock-agentcore:*"
+      ],
+      "Resource": "*"
+    }
+  ]
+}
