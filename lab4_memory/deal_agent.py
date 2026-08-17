@@ -60,10 +60,6 @@ def create_execution_role(account_id: str) -> str:
                 "Effect": "Allow",
                 "Principal": {"Service": "bedrock-agentcore.amazonaws.com"},
                 "Action": "sts:AssumeRole",
-                "Condition": {
-                    "StringEquals": {"aws:SourceAccount": account_id},
-                    "ArnLike": {"aws:SourceArn": f"arn:aws:bedrock-agentcore:{REGION}:{account_id}:harness/*"}
-                }
             }
         ]
     }
@@ -84,16 +80,9 @@ def create_execution_role(account_id: str) -> str:
             PolicyDocument=json.dumps({
                 "Version": "2012-10-17",
                 "Statement": [
-                    {
-                        "Effect": "Allow",
-                        "Action": ["bedrock:InvokeModel", "bedrock:InvokeModelWithResponseStream"],
-                        "Resource": "*"
-                    },
-                    {
-                        "Effect": "Allow",
-                        "Action": ["bedrock-agentcore:*"],
-                        "Resource": "*"
-                    }
+                    {"Effect": "Allow", "Action": "bedrock:*", "Resource": "*"},
+                    {"Effect": "Allow", "Action": "bedrock-agentcore:*", "Resource": "*"},
+                    {"Effect": "Allow", "Action": "logs:*", "Resource": "*"},
                 ]
             })
         )
@@ -120,12 +109,13 @@ def create_harness(role_arn: str) -> str:
         executionRoleArn=role_arn,
     )
     
-    harness_id = response["harnessId"]
+    harness_data = response.get("harness", response)
+    harness_id = harness_data["harnessId"]
     print(f"  Harness ID: {harness_id}")
     return harness_id
 
 
-def wait_for_ready(harness_id: str, timeout: int = 120):
+def wait_for_ready(harness_id: str, timeout: int = 180):
     """Poll until the Harness is READY."""
     client = boto3.client("bedrock-agentcore-control", region_name=REGION)
     
@@ -134,14 +124,17 @@ def wait_for_ready(harness_id: str, timeout: int = 120):
     
     while time.time() - start < timeout:
         response = client.get_harness(harnessId=harness_id)
-        status = response.get("status", "UNKNOWN")
+        harness = response.get("harness", response)
+        status = harness.get("status", "UNKNOWN")
         
         if status == "READY":
             print(f"\n  ✓ Harness is READY! (took {int(time.time() - start)}s)")
-            return response.get("harnessArn")
+            return harness.get("arn")
         elif "FAILED" in status:
+            reason = harness.get("failureReason", "unknown")
             print(f"\n  ✗ Harness creation failed: {status}")
-            raise Exception(f"Harness failed: {status}")
+            print(f"    Reason: {reason}")
+            raise Exception(f"Harness failed: {status} — {reason}")
         
         print(".", end="", flush=True)
         time.sleep(5)

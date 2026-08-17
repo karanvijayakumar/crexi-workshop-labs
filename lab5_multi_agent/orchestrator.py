@@ -112,10 +112,6 @@ def get_role_arn(account_id: str) -> str:
             "Effect": "Allow",
             "Principal": {"Service": "bedrock-agentcore.amazonaws.com"},
             "Action": "sts:AssumeRole",
-            "Condition": {
-                "StringEquals": {"aws:SourceAccount": account_id},
-                "ArnLike": {"aws:SourceArn": f"arn:aws:bedrock-agentcore:{REGION}:{account_id}:harness/*"}
-            }
         }]
     }
     
@@ -131,8 +127,9 @@ def get_role_arn(account_id: str) -> str:
             PolicyDocument=json.dumps({
                 "Version": "2012-10-17",
                 "Statement": [
-                    {"Effect": "Allow", "Action": ["bedrock:InvokeModel", "bedrock:InvokeModelWithResponseStream"], "Resource": "*"},
-                    {"Effect": "Allow", "Action": ["bedrock-agentcore:*"], "Resource": "*"}
+                    {"Effect": "Allow", "Action": "bedrock:*", "Resource": "*"},
+                    {"Effect": "Allow", "Action": "bedrock-agentcore:*", "Resource": "*"},
+                    {"Effect": "Allow", "Action": "logs:*", "Resource": "*"},
                 ]
             })
         )
@@ -153,12 +150,13 @@ def create_agent(control_client, agent_key: str, role_arn: str) -> str:
         executionRoleArn=role_arn,
     )
     
-    harness_id = response["harnessId"]
+    harness_data = response.get("harness", response)
+    harness_id = harness_data["harnessId"]
     print(f"  Created {agent_key}: {agent_config['name']} (ID: {harness_id})")
     return harness_id
 
 
-def wait_all_ready(control_client, harness_ids: dict, timeout: int = 180):
+def wait_all_ready(control_client, harness_ids: dict, timeout: int = 300):
     """Wait for all Harness agents to be READY."""
     print("\n  Waiting for all agents to be READY", end="")
     start = time.time()
@@ -170,11 +168,12 @@ def wait_all_ready(control_client, harness_ids: dict, timeout: int = 180):
             if key in arns:
                 continue
             response = control_client.get_harness(harnessId=hid)
-            status = response.get("status", "UNKNOWN")
+            harness = response.get("harness", response)
+            status = harness.get("status", "UNKNOWN")
             if status == "READY":
-                arns[key] = response.get("harnessArn")
+                arns[key] = harness.get("arn")
             elif "FAILED" in status:
-                raise Exception(f"{key} failed: {status}")
+                raise Exception(f"{key} failed: {status} — {harness.get('failureReason', 'unknown')}")
             else:
                 all_ready = False
         

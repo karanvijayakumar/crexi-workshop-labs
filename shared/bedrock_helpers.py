@@ -12,7 +12,7 @@ from typing import Optional
 DEFAULT_REGION = "us-east-1"
 
 # Model IDs — using cross-region inference profiles for availability
-MODEL_CLAUDE_SONNET = "us.anthropic.claude-sonnet-4-20250514"
+MODEL_CLAUDE_SONNET = "us.anthropic.claude-sonnet-4-20250514-v1:0"
 MODEL_NOVA_MICRO = "us.amazon.nova-micro-v1:0"
 
 
