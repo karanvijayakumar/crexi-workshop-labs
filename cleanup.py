@@ -21,11 +21,12 @@ def cleanup_harnesses():
         
         # List all harnesses
         response = client.list_harnesses()
-        harnesses = response.get("harnessSummaries", [])
+        harnesses = response.get("harnesses", response.get("harnessSummaries", []))
         
         workshop_harnesses = [
             h for h in harnesses 
             if h.get("harnessName", "").startswith("Crexi")
+            and h.get("status") not in ("DELETING", "DELETE_FAILED")
         ]
         
         if not workshop_harnesses:

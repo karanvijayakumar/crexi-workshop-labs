@@ -28,12 +28,24 @@ import boto3
 
 # Configuration
 REGION = "us-east-1"
-TIMESTAMP = int(time.time()) % 10000
+
+def get_unique_suffix():
+    """Generate a short unique suffix from the caller's IAM identity.
+    
+    Ensures 40 people on the same AWS account don't collide on Harness names.
+    """
+    sts = boto3.client("sts", region_name=REGION)
+    identity = sts.get_caller_identity()
+    arn = identity["Arn"]
+    user_part = arn.split("/")[-1].split("@")[0].replace(".", "")
+    return user_part[:8]
+
+USER_SUFFIX = get_unique_suffix()
 
 # Agent definitions
 AGENTS = {
     "market_analyst": {
-        "name": f"CrexiMarketAnalyst{TIMESTAMP}",
+        "name": f"CrexiMA_{USER_SUFFIX}",
         "system_prompt": """You are a CRE market analyst specializing in commercial real estate market research.
 
 When given a property, analyze:
@@ -47,7 +59,7 @@ Be specific with data points. Provide a market rating: Strong / Moderate / Weak.
 Keep your analysis to 3-4 concise paragraphs."""
     },
     "underwriter": {
-        "name": f"CrexiUnderwriter{TIMESTAMP}",
+        "name": f"CrexiUW_{USER_SUFFIX}",
         "system_prompt": """You are a CRE underwriter specializing in investment analysis.
 
 When given a property, analyze:
@@ -62,7 +74,7 @@ Provide a recommendation: Strong Buy / Buy / Hold / Pass.
 Keep your analysis to 3-4 concise paragraphs with specific numbers."""
     },
     "orchestrator": {
-        "name": f"CrexiOrchestrator{TIMESTAMP}",
+        "name": f"CrexiOrch_{USER_SUFFIX}",
         "system_prompt": """You are a senior CRE investment director at a major real estate investment firm.
 
 You receive market analysis and underwriting analysis from your team. Your job is to:
@@ -181,17 +193,35 @@ def get_role_arn(account_id: str) -> str:
 
 
 def create_agent(control_client, agent_key: str, role_arn: str) -> str:
-    """Create a single Harness agent."""
+    """Create a single Harness agent. If one with the same name exists, delete it first."""
     agent_config = AGENTS[agent_key]
+    name = agent_config["name"]
     
-    response = control_client.create_harness(
-        harnessName=agent_config["name"],
-        executionRoleArn=role_arn,
-    )
+    try:
+        response = control_client.create_harness(
+            harnessName=name,
+            executionRoleArn=role_arn,
+        )
+    except control_client.exceptions.ConflictException:
+        # Harness with this name already exists (leftover from previous run)
+        print(f"  ⚠ {name} already exists — deleting and recreating...")
+        # Find and delete it
+        existing = control_client.list_harnesses()
+        for h in existing.get("harnesses", []):
+            if h.get("harnessName") == name:
+                try:
+                    control_client.delete_harness(harnessId=h["harnessId"])
+                except Exception:
+                    pass
+        time.sleep(10)  # Wait for deletion
+        response = control_client.create_harness(
+            harnessName=name,
+            executionRoleArn=role_arn,
+        )
     
     harness_data = response.get("harness", response)
     harness_id = harness_data["harnessId"]
-    print(f"  Created {agent_key}: {agent_config['name']} (ID: {harness_id})")
+    print(f"  Created {agent_key}: {name} (ID: {harness_id})")
     return harness_id
 
 

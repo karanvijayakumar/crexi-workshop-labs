@@ -28,7 +28,25 @@ import boto3
 
 # Configuration
 REGION = "us-east-1"
-HARNESS_NAME = f"CrexiDealAgent{int(time.time()) % 10000}"
+
+def get_unique_suffix():
+    """Generate a short unique suffix from the caller's IAM identity.
+    
+    This ensures 40 people on the same AWS account don't collide on
+    Harness names. Uses the last 6 chars of the IAM username/role session.
+    """
+    import hashlib
+    sts = boto3.client("sts", region_name=REGION)
+    identity = sts.get_caller_identity()
+    # Use the ARN to derive a short, stable, per-user suffix
+    arn = identity["Arn"]
+    # Extract the username/session part (e.g., "john.doe" or "Karan.Vijayakumar@zeb.co")
+    user_part = arn.split("/")[-1].split("@")[0].replace(".", "")
+    # Take first 8 chars to keep harness name under 40 char limit
+    return user_part[:8]
+
+USER_SUFFIX = get_unique_suffix()
+HARNESS_NAME = f"CrexiDeal_{USER_SUFFIX}"
 
 SYSTEM_PROMPT = """You are a CRE deal analyst for a commercial real estate brokerage. 
 
@@ -144,15 +162,30 @@ def create_execution_role(account_id: str) -> str:
 
 
 def create_harness(role_arn: str) -> str:
-    """Create an AgentCore Harness."""
+    """Create an AgentCore Harness. If one with the same name exists, delete and recreate."""
     client = boto3.client("bedrock-agentcore-control", region_name=REGION)
     
     print(f"\n  Creating Harness: {HARNESS_NAME}")
     
-    response = client.create_harness(
-        harnessName=HARNESS_NAME,
-        executionRoleArn=role_arn,
-    )
+    try:
+        response = client.create_harness(
+            harnessName=HARNESS_NAME,
+            executionRoleArn=role_arn,
+        )
+    except client.exceptions.ConflictException:
+        print(f"  ⚠ {HARNESS_NAME} already exists — deleting and recreating...")
+        existing = client.list_harnesses()
+        for h in existing.get("harnesses", []):
+            if h.get("harnessName") == HARNESS_NAME:
+                try:
+                    client.delete_harness(harnessId=h["harnessId"])
+                except Exception:
+                    pass
+        time.sleep(10)
+        response = client.create_harness(
+            harnessName=HARNESS_NAME,
+            executionRoleArn=role_arn,
+        )
     
     harness_data = response.get("harness", response)
     harness_id = harness_data["harnessId"]
