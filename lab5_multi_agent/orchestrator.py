@@ -102,7 +102,7 @@ def get_account_id():
 
 
 def get_role_arn(account_id: str) -> str:
-    """Get or create the execution role."""
+    """Create a least-privilege execution role for the Harness (or reuse existing)."""
     iam = boto3.client("iam")
     role_name = "CrexiWorkshopHarnessRole"
     
@@ -115,23 +115,62 @@ def get_role_arn(account_id: str) -> str:
         }]
     }
     
+    permissions_policy = {
+        "Version": "2012-10-17",
+        "Statement": [
+            {
+                "Sid": "InvokeModelsOnly",
+                "Effect": "Allow",
+                "Action": [
+                    "bedrock:InvokeModel",
+                    "bedrock:InvokeModelWithResponseStream"
+                ],
+                "Resource": [
+                    "arn:aws:bedrock:*::foundation-model/anthropic.*",
+                    "arn:aws:bedrock:*::foundation-model/amazon.*",
+                    f"arn:aws:bedrock:*:{account_id}:inference-profile/*"
+                ]
+            },
+            {
+                "Sid": "AgentCoreRuntime",
+                "Effect": "Allow",
+                "Action": [
+                    "bedrock-agentcore:InvokeHarness",
+                    "bedrock-agentcore:InvokeAgentRuntime",
+                    "bedrock-agentcore:ListEvents",
+                    "bedrock-agentcore:CreateEvent",
+                    "bedrock-agentcore:GetMemory",
+                    "bedrock-agentcore:CreateMemory",
+                    "bedrock-agentcore:ListSessions",
+                    "bedrock-agentcore:GetSession",
+                    "bedrock-agentcore:CreateSession",
+                    "bedrock-agentcore:DeleteSession"
+                ],
+                "Resource": f"arn:aws:bedrock-agentcore:{REGION}:{account_id}:*"
+            },
+            {
+                "Sid": "CloudWatchLogs",
+                "Effect": "Allow",
+                "Action": [
+                    "logs:CreateLogGroup",
+                    "logs:CreateLogStream",
+                    "logs:PutLogEvents"
+                ],
+                "Resource": f"arn:aws:logs:{REGION}:{account_id}:log-group:/aws/bedrock-agentcore/*"
+            }
+        ]
+    }
+    
     try:
-        response = iam.create_role(
+        iam.create_role(
             RoleName=role_name,
             AssumeRolePolicyDocument=json.dumps(trust_policy),
-            Description="Execution role for Crexi Workshop AgentCore Harness",
+            Description="Least-privilege execution role for Crexi Workshop AgentCore Harness",
         )
         iam.put_role_policy(
             RoleName=role_name,
             PolicyName="BedrockAgentCoreAccess",
-            PolicyDocument=json.dumps({
-                "Version": "2012-10-17",
-                "Statement": [
-                    {"Effect": "Allow", "Action": "bedrock:*", "Resource": "*"},
-                    {"Effect": "Allow", "Action": "bedrock-agentcore:*", "Resource": "*"},
-                    {"Effect": "Allow", "Action": "logs:*", "Resource": "*"},
-                ]
-            })
+            PolicyDocument=json.dumps(permissions_policy),
         )
         print("  Created IAM role, waiting for propagation (10s)...")
         time.sleep(10)

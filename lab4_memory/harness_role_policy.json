@@ -1,22 +1,118 @@
 {
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Sid": "BedrockModelAccess",
-      "Effect": "Allow",
-      "Action": [
-        "bedrock:InvokeModel",
-        "bedrock:InvokeModelWithResponseStream"
-      ],
-      "Resource": "*"
-    },
-    {
-      "Sid": "AgentCoreAccess",
-      "Effect": "Allow",
-      "Action": [
-        "bedrock-agentcore:*"
-      ],
-      "Resource": "*"
-    }
-  ]
+  "RoleName": "CrexiWorkshopHarnessRole",
+  "Description": "Least-privilege execution role for Crexi Workshop AgentCore Harness. Replace ACCOUNT_ID and REGION with your values.",
+
+  "TrustPolicy": {
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Effect": "Allow",
+        "Principal": {"Service": "bedrock-agentcore.amazonaws.com"},
+        "Action": "sts:AssumeRole"
+      }
+    ]
+  },
+
+  "PermissionsPolicy": {
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Sid": "InvokeModelsOnly",
+        "Effect": "Allow",
+        "Action": [
+          "bedrock:InvokeModel",
+          "bedrock:InvokeModelWithResponseStream"
+        ],
+        "Resource": [
+          "arn:aws:bedrock:*::foundation-model/anthropic.*",
+          "arn:aws:bedrock:*::foundation-model/amazon.*",
+          "arn:aws:bedrock:*:ACCOUNT_ID:inference-profile/*"
+        ]
+      },
+      {
+        "Sid": "AgentCoreRuntime",
+        "Effect": "Allow",
+        "Action": [
+          "bedrock-agentcore:InvokeHarness",
+          "bedrock-agentcore:InvokeAgentRuntime"
+        ],
+        "Resource": "arn:aws:bedrock-agentcore:REGION:ACCOUNT_ID:harness/*"
+      },
+      {
+        "Sid": "CloudWatchLogs",
+        "Effect": "Allow",
+        "Action": [
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents"
+        ],
+        "Resource": "arn:aws:logs:REGION:ACCOUNT_ID:log-group:/aws/bedrock-agentcore/*"
+      }
+    ]
+  },
+
+  "AttendeePolicy": {
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Sid": "BedrockModels",
+        "Effect": "Allow",
+        "Action": [
+          "bedrock:InvokeModel",
+          "bedrock:InvokeModelWithResponseStream",
+          "bedrock:ListFoundationModels",
+          "bedrock:GetFoundationModel",
+          "bedrock:ListInferenceProfiles"
+        ],
+        "Resource": "*"
+      },
+      {
+        "Sid": "AgentCoreHarness",
+        "Effect": "Allow",
+        "Action": [
+          "bedrock-agentcore:CreateHarness",
+          "bedrock-agentcore:GetHarness",
+          "bedrock-agentcore:DeleteHarness",
+          "bedrock-agentcore:ListHarnesses",
+          "bedrock-agentcore:InvokeHarness",
+          "bedrock-agentcore:InvokeAgentRuntime",
+          "bedrock-agentcore:CreateAgentRuntime",
+          "bedrock-agentcore:GetAgentRuntime",
+          "bedrock-agentcore:CreateMemory",
+          "bedrock-agentcore:GetMemory"
+        ],
+        "Resource": "*"
+      },
+      {
+        "Sid": "CreateWorkshopRoleOnly",
+        "Effect": "Allow",
+        "Action": [
+          "iam:CreateRole",
+          "iam:GetRole",
+          "iam:PutRolePolicy",
+          "iam:DeleteRolePolicy",
+          "iam:ListRolePolicies",
+          "iam:DeleteRole"
+        ],
+        "Resource": "arn:aws:iam::ACCOUNT_ID:role/CrexiWorkshopHarnessRole"
+      },
+      {
+        "Sid": "PassWorkshopRoleOnly",
+        "Effect": "Allow",
+        "Action": "iam:PassRole",
+        "Resource": "arn:aws:iam::ACCOUNT_ID:role/CrexiWorkshopHarnessRole",
+        "Condition": {
+          "StringEquals": {
+            "iam:PassedToService": "bedrock-agentcore.amazonaws.com"
+          }
+        }
+      },
+      {
+        "Sid": "VerifyIdentity",
+        "Effect": "Allow",
+        "Action": "sts:GetCallerIdentity",
+        "Resource": "*"
+      }
+    ]
+  }
 }
