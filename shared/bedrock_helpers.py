@@ -9,10 +9,10 @@ from typing import Optional
 
 
 # Default region — change if needed
-DEFAULT_REGION = "us-east-1"
+DEFAULT_REGION = "us-west-2"
 
 # Model IDs — using cross-region inference profiles for availability
-MODEL_CLAUDE_SONNET = "us.anthropic.claude-sonnet-4-20250514-v1:0"
+MODEL_CLAUDE_SONNET = "us.anthropic.claude-sonnet-4-6"
 MODEL_NOVA_MICRO = "us.amazon.nova-micro-v1:0"
 
 

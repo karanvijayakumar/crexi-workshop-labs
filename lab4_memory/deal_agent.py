@@ -27,7 +27,7 @@ import boto3
 
 
 # Configuration
-REGION = "us-east-1"
+REGION = "us-west-2"
 
 def get_unique_suffix():
     """Generate a short unique suffix from the caller's IAM identity.
