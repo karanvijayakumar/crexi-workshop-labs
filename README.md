@@ -83,4 +83,4 @@ Follow along at the workshop site for step-by-step instructions and context.
 
 ---
 
-*Workshop by Karan Vijayakumar, Sr. Solutions Architect at zeb — AWS Premier Tier Partner*
+*Presented by zeb — AWS Premier Tier Partner*

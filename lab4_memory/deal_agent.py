@@ -40,7 +40,7 @@ def get_unique_suffix():
     identity = sts.get_caller_identity()
     # Use the ARN to derive a short, stable, per-user suffix
     arn = identity["Arn"]
-    # Extract the username/session part (e.g., "john.doe" or "Karan.Vijayakumar@zeb.co")
+    # Extract the username/session part from the ARN
     user_part = arn.split("/")[-1].split("@")[0].replace(".", "")
     # Take first 8 chars to keep harness name under 40 char limit
     return user_part[:8]
